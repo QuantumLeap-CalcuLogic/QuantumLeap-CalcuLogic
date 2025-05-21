@@ -1,0 +1,1075 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuantumLeap CalcuLogic | Advanced Scientific Calculator</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #81C784; /* Light Green for operators, title */
+            --primary-dark: #66BB6A;
+            --primary-light: rgba(129, 199, 132, 0.2);
+            --secondary: #424242; /* Dark Gray for number/basic function buttons */
+            --secondary-dark: #303030;
+            --accent: #64B5F6; /* Light Blue for equals */
+            --accent-dark: #42A5F5;
+            --text: #E0E0E0; /* Light Gray text on dark backgrounds */
+            --text-dark: #212121; /* Dark Gray text on light backgrounds */
+            --text-secondary: #BDBDBD;
+            --bg: #212121; /* Very Dark Gray background */
+            --surface: #303030; /* Darker Gray for calculator body */
+            --surface-light: #424242;
+            --error: #E57373; /* Light Red */
+            --success: #81C784;
+            --warning: #FFB74D;
+            --border-radius: 12px;
+            --button-radius: 8px;
+            --shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            --transition: all 0.15s ease-out;
+            --button-size: 60px;
+            --grid-gap: 8px; /* Slightly reduced gap for denser layout */
+        }
+
+        body.light-mode {
+            --primary: #4CAF50;
+            --primary-dark: #388E3C;
+            --primary-light: rgba(76, 175, 80, 0.2);
+            --secondary: #EEEEEE;
+            --secondary-dark: #D5D5D5;
+            --accent: #2196F3;
+            --accent-dark: #1976D2;
+            --text: #212121;
+            --text-dark: #FAFAFA;
+            --text-secondary: #757575;
+            --bg: #FAFAFA;
+            --surface: #FFFFFF;
+            --surface-light: #E0E0E0;
+            --error: #F44336;
+            --success: #4CAF50;
+            --warning: #FF9800;
+            --shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            display: flex; /* Helps in centering the calculator */
+            justify-content: center; /* Center horizontally */
+            align-items: center; /* Center vertically */
+            width: 100%;
+            min-height: 100dvh; /* Use dynamic viewport height */
+            overflow-y: auto; /* Allow body to scroll if needed, though calculator should fit */
+            transition: var(--transition);
+            padding: 5px; /* Small padding around the body */
+        }
+
+        .calculator {
+            width: 100%;
+            max-width: 450px; /* Max width for comfortable use */
+            height: auto; /* Let content define height */
+            max-height: 98dvh; /* Max height to prevent overflow, allow scrolling within */
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            background: var(--surface);
+            transition: var(--transition);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto; /* Allow calculator itself to scroll if content exceeds max-height */
+            scrollbar-width: none; /* Firefox */
+        }
+        .calculator::-webkit-scrollbar { display: none; }
+
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 12px 5px 12px;
+            min-height: 45px;
+            flex-shrink: 0;
+            position: sticky; /* Keep header visible when calculator scrolls */
+            top: 0;
+            background: var(--surface); /* Match calculator background */
+            z-index: 100; /* Ensure header is above scrolling content */
+        }
+        
+        .calculator-title-pro {
+            font-size: 1.0rem;
+            font-weight: 700;
+            color: var(--primary);
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        }
+        body.light-mode .calculator-title-pro { color: var(--primary-dark); }
+
+        .controls { display: flex; gap: 6px; }
+        .control-btn {
+            background: var(--surface-light); border: none; color: var(--text-secondary);
+            font-size: 0.8rem; font-weight: 500; cursor: pointer; padding: 6px 9px;
+            border-radius: 6px; transition: var(--transition); display: flex;
+            align-items: center; justify-content: center;
+        }
+        .control-btn:hover { background: #525252; color: var(--text); }
+        body.light-mode .control-btn:hover { background: var(--secondary-dark); }
+        .control-btn.active { background: var(--primary); color: var(--text-dark); }
+        body.light-mode .control-btn.active { background: var(--primary-dark); color: var(--text-dark); }
+
+        .display-container {
+            padding: 5px 12px 8px 12px; position: relative; flex-grow: 1;
+            display: flex; flex-direction: column; justify-content: flex-end;
+            min-height: 90px; flex-shrink: 1;
+        }
+        .display {
+            font-size: 3.8rem; font-weight: 300; min-height: 60px;
+            word-wrap: break-word; word-break: break-all; padding: 4px 0;
+            overflow-x: auto; white-space: nowrap; scrollbar-width: none;
+            transition: var(--transition); font-feature-settings: "tnum";
+            font-variant-numeric: tabular-nums; line-height: 1.1;
+            width: 100%; text-align: right; color: var(--text);
+        }
+        .display::-webkit-scrollbar { display: none; }
+        .secondary-display {
+            font-size: 1.1rem; color: var(--text-secondary); min-height: 18px;
+            margin-bottom: 3px; opacity: 0.8; font-feature-settings: "tnum";
+            font-variant-numeric: tabular-nums; overflow-x: auto; white-space: nowrap;
+            scrollbar-width: none; word-break: break-all; line-height: 1;
+            width: 100%; text-align: right;
+        }
+        .secondary-display::-webkit-scrollbar { display: none; }
+        .mode-indicator-container {
+            position: absolute; top: 2px; left: 12px; font-size: 0.7rem;
+            color: var(--text-secondary); background-color: rgba(0,0,0,0.1);
+            padding: 1px 4px; border-radius: 3px; opacity: 0.7;
+        }
+        body.light-mode .mode-indicator-container { background-color: rgba(255,255,255,0.1); }
+
+
+        .panel-switcher {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--grid-gap);
+            padding: var(--grid-gap); background: var(--surface); flex-shrink: 0;
+            position: sticky; /* Keep panel switcher visible */
+            top: 45px; /* Height of the header */
+            background: var(--surface);
+            z-index: 99; /* Below header, above button panels */
+        }
+        .panel-switcher button {
+            height: 32px; font-size: 0.8rem; font-weight: 500; color: var(--text-secondary);
+            background: var(--surface-light); border: none; cursor: pointer;
+            border-radius: 6px; transition: var(--transition);
+        }
+        .panel-switcher button:hover { background: #525252; color: var(--text); }
+        body.light-mode .panel-switcher button:hover { background: var(--secondary-dark); }
+        .panel-switcher button.active { background: var(--primary); color: var(--text-dark); font-weight: 600; }
+        .panel-switcher button.active:hover { background: var(--primary-dark); }
+        body.light-mode .panel-switcher button.active { background: var(--primary-dark); }
+
+        .button-grids-container {
+            position: relative; width: 100%; flex-grow: 2; flex-shrink: 1;
+            overflow: hidden; /* Panels themselves will scroll if needed */
+            min-height: 280px; /* Adjusted based on typical button rows */
+        }
+        .button-panel {
+            display: none; grid-template-columns: repeat(4, 1fr); gap: var(--grid-gap);
+            background: var(--surface); padding: var(--grid-gap);
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            overflow-y: auto; scrollbar-width: none;
+        }
+        .button-panel::-webkit-scrollbar { display: none; }
+        .button-panel.active { display: grid !important; z-index: 10; }
+        #scientificPanel { grid-template-columns: repeat(5, 1fr); }
+        #converterPanel { grid-template-columns: repeat(4, 1fr); }
+        #basicPanel { grid-template-columns: repeat(4, 1fr); }
+
+        .number-pad {
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--grid-gap);
+            background: var(--surface); padding: var(--grid-gap); flex-shrink: 0;
+            /* No sticky for numpad, it should scroll with calculator if calc is too tall */
+        }
+
+        button {
+            font-size: 1.6rem; height: var(--button-size); border: none;
+            background: var(--secondary); color: var(--text); cursor: pointer;
+            transition: var(--transition); font-weight: 400; outline: none;
+            position: relative; overflow: hidden; font-family: 'Inter', sans-serif;
+            border-radius: var(--button-radius); display: flex; align-items: center;
+            justify-content: center; box-shadow: var(--shadow);
+        }
+        button:active { opacity: 0.8; transform: scale(0.95); box-shadow: 0 2px 4px rgba(0,0,0,0.4); }
+        button:hover { background: var(--secondary-dark); }
+        body.light-mode button:hover { background: var(--secondary-dark); }
+
+        .wide { grid-column: span 2; justify-content: flex-start; padding-left: 18px; }
+        .primary { background: var(--primary); color: var(--text-dark); font-weight: 500; }
+        .primary:hover { background: var(--primary-dark); }
+        .secondary {
+            background: var(--surface-light); color: var(--text);
+            font-size: 0.95rem; font-weight: 400;
+        }
+        .secondary:hover { background: #525252; }
+        body.light-mode .secondary { background: var(--surface-light); color: var(--text); }
+        body.light-mode .secondary:hover { background: var(--secondary-dark); }
+        .accent { background: var(--accent); color: var(--text-dark); font-weight: 600; }
+        .accent:hover { background: var(--accent-dark); }
+        .clear-btn { background: var(--surface-light) !important; color: var(--error) !important; font-weight: 500; }
+        .clear-btn:hover { background: #525252 !important; color: var(--error) !important; }
+        body.light-mode .clear-btn { background: var(--surface-light) !important; color: var(--error) !important; }
+        body.light-mode .clear-btn:hover { background: var(--secondary-dark) !important; }
+
+        #scientificPanel button, #converterPanel button, #basicPanel button {
+            font-size: 0.85rem; height: 45px; border-radius: 6px;
+        }
+        #basicPanel button { font-size: 1rem; }
+        .constant-btn, .function-btn { font-size: 0.75rem !important; }
+        #converterPanel button { font-size: 0.75rem !important; font-weight: normal; padding: 0 3px; }
+        #scientificPanel .long-text-btn { font-size: 0.7rem !important; padding: 0 2px; line-height: 1.1; }
+        
+        .toast {
+            position: fixed; bottom: -70px; left: 50%; transform: translateX(-50%);
+            background: var(--surface-light); color: var(--text); padding: 10px 18px;
+            border-radius: 8px; box-shadow: var(--shadow); z-index: 10000;
+            opacity: 0; transition: opacity 0.3s ease, bottom 0.3s ease;
+            font-size: 0.85rem; max-width: 90%; text-align: center;
+        }
+        .toast.show { opacity: 1; bottom: 15px; }
+        .toast.error { background: var(--error); color: var(--text-dark); }
+        .toast.success { background: var(--success); color: var(--text-dark); }
+        .toast.warning { background: var(--warning); color: var(--text-dark); }
+        .toast.info { background: var(--primary-light); color: var(--primary); }
+        body.light-mode .toast.info { background: var(--primary-light); color: var(--primary-dark); }
+
+        .pulse { animation: pulse 0.3s ease-out; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.03); } 100% { transform: scale(1); } }
+        .shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
+        @keyframes shake {
+            10%, 90% { transform: translateX(-1px); } 20%, 80% { transform: translateX(2px); }
+            30%, 50%, 70% { transform: translateX(-4px); } 40%, 60% { transform: translateX(4px); }
+        }
+
+        @media (max-width: 400px) { /* More aggressive scaling for smaller phones */
+            .calculator { max-width: 100%; border-radius: 0; max-height: 100dvh; }
+            .header { padding: 8px 10px 4px 10px; min-height: 40px; top:0; }
+            .panel-switcher { top: 40px; }
+            .calculator-title-pro { font-size: 0.9rem; }
+            .control-btn { padding: 5px 7px; font-size: 0.75rem; }
+            .display { font-size: 3.2rem; min-height: 50px; }
+            .secondary-display { font-size: 1.0rem; }
+            .mode-indicator-container { font-size: 0.65rem; }
+            .panel-switcher button { height: 30px; font-size: 0.75rem; }
+            .button-grids-container { min-height: 240px; }
+            #scientificPanel button, #converterPanel button, #basicPanel button { height: 40px; font-size: 0.75rem; }
+            #basicPanel button { font-size: 0.9rem; }
+            .constant-btn, .function-btn { font-size: 0.7rem !important; }
+            #converterPanel button { font-size: 0.7rem !important; }
+            #scientificPanel .long-text-btn { font-size: 0.65rem !important; }
+            button { font-size: 1.4rem; height: 50px; border-radius: 6px; }
+            .wide { padding-left: 15px; }
+        }
+         @media (max-width: 360px) {
+            .display { font-size: 2.8rem; }
+             #scientificPanel button, #converterPanel button, #basicPanel button { height: 38px; font-size: 0.7rem; }
+             #basicPanel button { font-size: 0.85rem; }
+             .constant-btn, .function-btn { font-size: 0.65rem !important; }
+             #converterPanel button { font-size: 0.65rem !important; }
+             #scientificPanel .long-text-btn { font-size: 0.6rem !important; }
+             button { font-size: 1.3rem; height: 48px; }
+        }
+    </style>
+</head>
+<body class="dark-mode">
+    <div class="calculator">
+        <div class="header">
+            <div class="calculator-title-pro">QuantumLeap CalcuLogic</div>
+            <div class="controls">
+                <button class="control-btn" id="degRadToggleBtn" onclick="toggleDegRad()" title="Toggle DEG/RAD (M)">DEG</button>
+                <button class="control-btn" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle Theme">
+                    <i class="fas fa-moon"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="display-container">
+            <div class="mode-indicator-container" id="modeIndicator">DEG</div>
+            <div class="secondary-display" id="secondaryDisplay"></div>
+            <div class="display" id="display">0</div>
+        </div>
+
+        <div class="panel-switcher">
+            <button id="basicBtn" class="active" onclick="switchTab('basicPanel', this)">Basic</button>
+            <button id="scientificBtn" onclick="switchTab('scientificPanel', this)">Scientific</button>
+            <button id="converterBtn" onclick="switchTab('converterPanel', this)">Convert</button>
+        </div>
+
+        <div class="button-grids-container">
+            <div class="button-panel active" id="basicPanel">
+                <button class="secondary clear-btn" title="Clear All (Delete/Esc)" onclick="clearAll()">AC</button>
+                <button class="secondary" title="Toggle Sign" onclick="toggleSign()">+/-</button>
+                <button class="secondary" title="Percentage (Shift+5)" onclick="appendOperator('%')">%</button>
+                <button class="secondary" title="Memory Clear" onclick="memoryClear()">MC</button>
+                <button class="secondary" title="Memory Recall" onclick="memoryRecall()">MR</button>
+                <button class="secondary" title="Memory Add" onclick="memoryAdd()">M+</button>
+                <button class="secondary" title="Memory Subtract" onclick="memorySubtract()">M-</button>
+                <button class="secondary" title="Memory Store" onclick="memoryStore()">MS</button>
+            </div>
+
+            <div class="button-panel" id="scientificPanel">
+                <button class="secondary function-btn" onclick="appendFunction('sin(')">sin</button>
+                <button class="secondary function-btn" onclick="appendFunction('cos(')">cos</button>
+                <button class="secondary function-btn" onclick="appendFunction('tan(')">tan</button>
+                <button class="secondary function-btn" onclick="appendOperator('(')">(</button>
+                <button class="secondary function-btn" onclick="appendOperator(')')">)</button>
+
+                <button class="secondary function-btn" onclick="appendFunction('asin(')">sin⁻¹</button>
+                <button class="secondary function-btn" onclick="appendFunction('acos(')">cos⁻¹</button>
+                <button class="secondary function-btn" onclick="appendFunction('atan(')">tan⁻¹</button>
+                <button class="secondary function-btn" onclick="appendFunction('sqrt(')">√</button>
+                <button class="secondary function-btn" onclick="appendFunction('cbrt(')">³√</button>
+
+                <button class="secondary function-btn" onclick="appendFunction('log10(')">log₁₀</button>
+                <button class="secondary function-btn" onclick="appendFunction('log(')">ln</button>
+                <button class="secondary function-btn" onclick="applyPostFunction('**2', '^2')">x²</button>
+                <button class="secondary function-btn" onclick="applyPostFunction('**3', '^3')">x³</button>
+                <button class="secondary function-btn" onclick="appendOperator('**')">xʸ</button>
+
+                <button class="secondary function-btn" onclick="applyPostFunction('!', '!')">x!</button>
+                <button class="secondary function-btn" onclick="reciprocal()">1/x</button>
+                <button class="secondary function-btn" onclick="appendFunction('abs(')">|x|</button>
+                <button class="secondary function-btn" onclick="appendFunction('round(')">round</button>
+                <button class="secondary function-btn" onclick="insertRandom()">Rand</button>
+
+                <button class="secondary constant-btn" onclick="appendConstant('PI_CONST', 'π')">π</button>
+                <button class="secondary constant-btn" onclick="appendConstant('E_CONST', 'e')">e</button>
+                <button class="secondary function-btn" onclick="appendFunction('exp(')">eˣ</button>
+                <button class="secondary function-btn long-text-btn" title="Solve Quadratic (Q)" onclick="solveQuadratic()">ax²+bx+c</button>
+                <button class="secondary function-btn" onclick="calculateNPR()">nPr</button>
+                
+                <button class="secondary function-btn" onclick="calculateNCR()">nCr</button>
+                <button class="secondary function-btn" onclick="appendFunction('sinh(')">sinh</button>
+                <button class="secondary function-btn" onclick="appendFunction('cosh(')">cosh</button>
+                <button class="secondary function-btn" onclick="appendFunction('tanh(')">tanh</button>
+                <button class="secondary constant-btn long-text-btn" onclick="appendConstant('C_LIGHT', 'c')">c</button>
+
+                <button class="secondary function-btn" onclick="appendFunction('asinh(')">asinh</button>
+                <button class="secondary function-btn" onclick="appendFunction('acosh(')">acosh</button>
+                <button class="secondary function-btn" onclick="appendFunction('atanh(')">atanh</button>
+                <button class="secondary constant-btn long-text-btn" onclick="appendConstant('H_PLANCK', 'h')">h</button>
+                <button class="secondary constant-btn long-text-btn" onclick="appendConstant('G_GRAV', 'G')">G</button>
+                
+                <button class="secondary constant-btn long-text-btn" onclick="appendConstant('N_AVOGADRO', 'Nₐ')">Nₐ</button>
+                <button class="secondary constant-btn long-text-btn" onclick="appendConstant('R_GAS', 'R')">R</button>
+                <button class="secondary function-btn" onclick="appendFunction('floor(')">floor</button>
+                <button class="secondary function-btn" onclick="appendFunction('ceil(')">ceil</button>
+                <button class="secondary function-btn" onclick="appendFunction('pow(10,')">10ˣ</button>
+            </div>
+
+            <div class="button-panel" id="converterPanel">
+                <button onclick="convertTemperature()" class="secondary">Temp</button>
+                <button onclick="convertLength()" class="secondary">Length</button>
+                <button onclick="convertWeight()" class="secondary">Weight</button>
+                <button onclick="convertAngle()" class="secondary">Angle</button>
+                <button onclick="convertArea()" class="secondary">Area</button>
+                <button onclick="convertVolume()" class="secondary">Volume</button>
+                <button onclick="convertTime()" class="secondary">Time</button>
+                <button onclick="convertSpeed()" class="secondary">Speed</button>
+                <button onclick="convertPressure()" class="secondary">Pressure</button>
+                <button onclick="convertEnergy()" class="secondary">Energy</button>
+                <button onclick="convertPower()" class="secondary">Power</button>
+                <button onclick="convertData()" class="secondary">Data</button>
+                <button onclick="convertCurrency()" class="secondary">Currency</button>
+                <button onclick="convertFuelEconomy()" class="secondary">Fuel Eco</button>
+                <button onclick="convertDigitalStorage()" class="secondary">Storage</button>
+                <button onclick="convertFrequency()" class="secondary">Freq</button>
+                <button onclick="convertVolumeFlow()" class="secondary">Vol Flow</button>
+                <button onclick="convertForce()" class="secondary">Force</button>
+                <button onclick="convertTorque()" class="secondary">Torque</button>
+                <button onclick="convertCharge()" class="secondary">Charge</button>
+                <button onclick="convertVoltage()" class="secondary">Voltage</button>
+                <button onclick="convertResistance()" class="secondary">Resistance</button>
+                <button onclick="convertCapacitance()" class="secondary">Capacit.</button>
+                <button onclick="convertAmountOfSubstance()" class="secondary">Mol</button>
+            </div>
+        </div>
+
+        <div class="number-pad">
+            <button class="clear-btn" title="Delete Last (Backspace)" ondblclick="clearAll()" onclick="deleteChar()"><i class="fas fa-backspace"></i></button>
+            <button onclick="appendNumber('7')">7</button>
+            <button onclick="appendNumber('8')">8</button>
+            <button onclick="appendNumber('9')">9</button>
+            <button class="primary" title="Divide" onclick="appendOperator('/')">÷</button>
+            
+            <button onclick="appendNumber('4')">4</button>
+            <button onclick="appendNumber('5')">5</button>
+            <button onclick="appendNumber('6')">6</button>
+            <button class="primary" title="Multiply" onclick="appendOperator('*')">×</button>
+            
+            <button onclick="appendNumber('1')">1</button>
+            <button onclick="appendNumber('2')">2</button>
+            <button onclick="appendNumber('3')">3</button>
+            <button class="primary" title="Subtract" onclick="appendOperator('-')">−</button>
+            
+            <button class="wide" onclick="appendNumber('0')">0</button>
+            <button onclick="appendDecimal()">.</button>
+            <button class="accent" title="Equals (Enter)" onclick="calculate()">=</button>
+            <button class="primary" title="Add" onclick="appendOperator('+')">+</button>
+        </div>
+        <div class="toast" id="toast"></div>
+    </div>
+
+    <script>
+        // --- DOM Elements ---
+        const display = document.getElementById('display');
+        const secondaryDisplay = document.getElementById('secondaryDisplay');
+        const themeToggleBtnIcon = document.querySelector('#themeToggleBtn i');
+        const toast = document.getElementById('toast');
+        const degRadToggleBtn = document.getElementById('degRadToggleBtn');
+        const modeIndicator = document.getElementById('modeIndicator');
+        const panelSwitcherButtons = document.querySelectorAll('.panel-switcher button');
+        const allButtonPanels = {
+            basicPanel: document.getElementById('basicPanel'),
+            scientificPanel: document.getElementById('scientificPanel'),
+            converterPanel: document.getElementById('converterPanel')
+        };
+
+        // --- State Variables ---
+        let currentInput = '0';
+        let displayValue = '0';
+        let openBracketCount = 0;
+        let isNewCalculation = true;
+        let degMode = true; // true for Degrees, false for Radians
+        let memoryValue = 0;
+
+        // --- Constants ---
+        const PI_CONST = Math.PI;
+        const E_CONST = Math.E;
+        const C_LIGHT = 299792458; // m/s
+        const H_PLANCK = 6.62607015e-34; // J·s
+        const G_GRAV = 6.67430e-11; // N·m²/kg²
+        const N_AVOGADRO = 6.02214076e23; // mol⁻¹
+        const R_GAS = 8.314462618; // J/(mol·K)
+
+        // --- Initialization ---
+        function init() {
+            loadPreferences();
+            updateDisplay();
+            setupHapticFeedback();
+            setupKeyboardInput();
+            switchTab('basicPanel', document.getElementById('basicBtn'));
+            updateDegRadUI();
+        }
+
+        function setupHapticFeedback() {
+            document.querySelectorAll('button').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    try { if (window.navigator.vibrate) window.navigator.vibrate(10); } catch (e) { /* Silently fail */ }
+                    btn.classList.add('pulse');
+                    setTimeout(() => btn.classList.remove('pulse'), 300);
+                });
+            });
+        }
+
+        function setupKeyboardInput() {
+            window.addEventListener('keydown', (event) => {
+                const key = event.key;
+                let handled = true; // Assume handled, set to false if not
+
+                if (event.shiftKey && key === '5') { appendOperator('%'); } // Shift+5 for %
+                else if (event.shiftKey && key === '^') { appendOperator('**'); } // Shift+6 for ^ (x^y)
+                else if (event.shiftKey && key === '(') { appendOperator('('); } // Shift+9
+                else if (event.shiftKey && key === ')') { appendOperator(')'); } // Shift+0
+                else if (/[0-9]/.test(key)) { appendNumber(key); }
+                else if (key === '.') { appendDecimal(); }
+                else if (key === '+') { appendOperator('+'); }
+                else if (key === '-') { appendOperator('-'); }
+                else if (key === '*') { appendOperator('*'); }
+                else if (key === '/') { appendOperator('/'); }
+                else if (key === 'Enter' || key === '=') { calculate(); }
+                else if (key === 'Backspace') { deleteChar(); }
+                else if (key === 'Delete' || key === 'Escape') { clearAll(); }
+                else if (key.toLowerCase() === 'm') { toggleDegRad(); }
+                else if (key.toLowerCase() === 'q') { solveQuadratic(); }
+                else if (key.toLowerCase() === 'p') { appendConstant('PI_CONST', 'π'); } // 'p' for Pi
+                else if (key.toLowerCase() === 'e') { appendConstant('E_CONST', 'e'); } // 'e' for Euler's
+                else { handled = false; } // Not a recognized key
+
+                if (handled) event.preventDefault();
+            });
+        }
+        
+        function loadPreferences() {
+            const savedDarkMode = localStorage.getItem('calc_darkMode_v6') !== 'false';
+            document.body.classList.toggle('dark-mode', savedDarkMode);
+            document.body.classList.toggle('light-mode', !savedDarkMode);
+            if (themeToggleBtnIcon) themeToggleBtnIcon.className = savedDarkMode ? 'fas fa-moon' : 'fas fa-sun';
+            degMode = localStorage.getItem('calc_degMode_v6') !== 'false';
+            updateDegRadUI();
+            memoryValue = parseFloat(localStorage.getItem('calc_memory_v6')) || 0;
+        }
+
+        function updateDisplay(pulse = false) {
+            let finalDisplayValue = formatDisplayValue(displayValue);
+            display.textContent = finalDisplayValue;
+            if (pulse) {
+                display.classList.add('pulse');
+                setTimeout(() => display.classList.remove('pulse'), 300);
+            }
+            if (!isNewCalculation && display.scrollWidth > display.clientWidth) {
+                display.scrollLeft = display.scrollWidth;
+            } else {
+                display.scrollLeft = 0;
+            }
+        }
+
+        function formatDisplayValue(valStr) {
+            if (valStr === null || valStr === undefined) return '0';
+            let str = String(valStr);
+            if (["Error", "Infinity", "-Infinity", "NaN"].includes(str) || str.includes("x₁") || str.includes("root")) return str; // Don't format errors or specific text results
+
+            try {
+                if (/^-?\d+(\.\d+)?(e[+\-]?\d+)?$/.test(str) && !str.match(/[^\d.\-eE+]/)) {
+                    const num = parseFloat(str);
+                    return num.toLocaleString('en-US', { maximumFractionDigits: 10, useGrouping: true });
+                }
+            } catch (e) { /* Fallback */ }
+            return str.replace(/\*\*/g, '^').replace(/\*/g, '×').replace(/\//g, '÷')
+                      .replace(/PI_CONST/g, 'π').replace(/E_CONST/g, 'e') // Display constants nicely
+                      .replace(/C_LIGHT/g, 'c').replace(/H_PLANCK/g, 'h')
+                      .replace(/G_GRAV/g, 'G').replace(/N_AVOGADRO/g, 'Nₐ').replace(/R_GAS/g, 'R');
+        }
+
+        function updateSecondaryDisplay(value = '') {
+            secondaryDisplay.textContent = formatDisplayValue(value); // Use formatter for secondary too
+            secondaryDisplay.scrollLeft = secondaryDisplay.scrollWidth;
+        }
+
+        function resetInputForNewCalculationIfNeeded() {
+            if (isNewCalculation) {
+                currentInput = '0'; displayValue = '0'; isNewCalculation = false;
+                openBracketCount = 0; secondaryDisplay.textContent = '';
+            }
+        }
+        function handleInitialZeroState() {
+            if (displayValue === '0' && currentInput === '0') { displayValue = ''; currentInput = ''; }
+        }
+        
+        function shouldInsertMultiply(input) {
+            if (input === '' || input === '0') return false;
+            const lastChar = input.slice(-1);
+            // Ends with number, ), or a constant name
+            return /[0-9\)]$/.test(lastChar) || input.endsWith('PI_CONST') || input.endsWith('E_CONST') ||
+                   input.endsWith('C_LIGHT') || input.endsWith('H_PLANCK') || input.endsWith('G_GRAV') ||
+                   input.endsWith('N_AVOGADRO') || input.endsWith('R_GAS');
+        }
+
+        function appendNumber(number) {
+            resetInputForNewCalculationIfNeeded(); handleInitialZeroState();
+            currentInput += number; displayValue += number;
+            updateDisplay(true); updateSecondaryDisplay(currentInput); // Show raw input in secondary
+        }
+        function appendDecimal() {
+            resetInputForNewCalculationIfNeeded(); handleInitialZeroState();
+            const segments = currentInput.split(/[\+\-\*\/\(\)\%\!\^\s]/);
+            if (!segments[segments.length - 1].includes('.')) {
+                currentInput += '.'; displayValue += '.';
+                updateDisplay(true); updateSecondaryDisplay(currentInput);
+            } else {
+                showToast('Invalid format: Multiple decimal points.', 'warning');
+                display.classList.add('shake'); setTimeout(() => display.classList.remove('shake'), 500);
+            }
+        }
+        function toggleSign() { /* Simplified: prepends -( if not already negative, or toggles if it's a simple number */
+            if (currentInput === '0' || currentInput === 'Error') return;
+            if (isNewCalculation) {
+                try {
+                    let val = parseFloat(currentInput);
+                    if (isNaN(val)) throw new Error("Not a number");
+                    currentInput = String(val * -1);
+                    displayValue = formatDisplayValue(currentInput); // Format after changing
+                } catch (e) { /* ignore */ }
+            } else { // For expressions, wrap with -(...) or try to unwrap
+                if (currentInput.startsWith('-(') && currentInput.endsWith(')')) {
+                    currentInput = currentInput.substring(2, currentInput.length - 1);
+                    displayValue = displayValue.substring(2, displayValue.length -1); // Approximation
+                } else if (!isNaN(parseFloat(currentInput)) && parseFloat(currentInput) !== 0) {
+                     currentInput = String(parseFloat(currentInput) * -1);
+                     displayValue = formatDisplayValue(currentInput);
+                }
+                else {
+                    currentInput = '-(' + currentInput + ')';
+                    displayValue = '-(' + displayValue + ')'; // Approximation
+                    openBracketCount++; // For the new '('
+                }
+            }
+            updateDisplay(); updateSecondaryDisplay(currentInput);
+        }
+
+        function appendOperator(op) {
+            if (currentInput === '' && op !== '(' && op !== '-') {
+                showToast('Invalid format: Operator at start.', 'warning'); return;
+            }
+            isNewCalculation = false;
+            const displayOp = op === '*' ? '×' : op === '/' ? '÷' : op === '**' ? '^' : op;
+            const operators = ['+', '-', '*', '/', '**', '%'];
+            const lastCharCurrent = currentInput.slice(-1);
+
+            if (op === '(') {
+                if (shouldInsertMultiply(currentInput)) { currentInput += '*'; displayValue += '×'; }
+                currentInput += '('; displayValue += '('; openBracketCount++;
+            } else if (op === ')') {
+                if (openBracketCount > 0 && !operators.includes(lastCharCurrent) && lastCharCurrent !== '(') {
+                    currentInput += ')'; displayValue += ')'; openBracketCount--;
+                } else { showToast('Invalid: Unmatched parenthesis.', 'warning'); return; }
+            } else if (operators.includes(lastCharCurrent) && op !== '(' && op !== ')') { // Replace last operator
+                if (!((lastCharCurrent === '*' || lastCharCurrent === '/') && op === '-')) { // Allow 5*-2
+                    currentInput = currentInput.slice(0, -1); 
+                    displayValue = displayValue.slice(0, - (displayValue.endsWith('×') || displayValue.endsWith('÷') || displayValue.endsWith('^') ? 1 : 1) );
+                }
+                currentInput += op; displayValue += displayOp;
+            } else {
+                if (lastCharCurrent === '(' && operators.includes(op) && op !== '-') {
+                     showToast('Invalid: Operator after opening parenthesis.', 'warning'); return;
+                }
+                currentInput += op; displayValue += displayOp;
+            }
+            updateDisplay(); updateSecondaryDisplay(currentInput);
+        }
+
+        function appendFunction(funcName) { // e.g., "sin(", "log10("
+            resetInputForNewCalculationIfNeeded();
+            if (shouldInsertMultiply(currentInput)) { currentInput += '*'; displayValue += '×'; }
+            handleInitialZeroState();
+            
+            currentInput += funcName; // Internal representation (e.g., "sin(")
+            
+            // Display representation
+            let displayFunc = funcName;
+            if (funcName === "log(") displayFunc = "ln(";
+            else if (funcName === "sqrt(") displayFunc = "√(";
+            else if (funcName === "cbrt(") displayFunc = "³√(";
+            else if (funcName === "asin(") displayFunc = "sin⁻¹(";
+            else if (funcName === "acos(") displayFunc = "cos⁻¹(";
+            else if (funcName === "atan(") displayFunc = "tan⁻¹(";
+            else if (funcName === "exp(") displayFunc = "eˣ(";
+            else if (funcName === "pow(10,") displayFunc = "10ˣ(";
+
+
+            displayValue += displayFunc;
+            
+            if (funcName.includes('(')) openBracketCount++;
+            isNewCalculation = false;
+            updateDisplay(true); updateSecondaryDisplay(currentInput);
+        }
+
+        function appendConstant(constEval, constDisplay) {
+            resetInputForNewCalculationIfNeeded();
+            if (shouldInsertMultiply(currentInput)) { currentInput += '*'; displayValue += '×'; }
+            handleInitialZeroState();
+            currentInput += constEval; // Use the variable name (e.g., PI_CONST)
+            displayValue += constDisplay; // User-friendly symbol
+            isNewCalculation = false;
+            updateDisplay(true); updateSecondaryDisplay(currentInput);
+        }
+        
+        function applyPostFunction(opEval, opDisplay) { // For x², x³, x!
+            if (currentInput === '' || currentInput === '0' || isNewCalculation) {
+                showToast("Enter a number first for " + opDisplay, "warning"); return;
+            }
+            const lastChar = currentInput.slice(-1);
+            if (/[\+\-\*\/\(\^\%\!]$/.test(lastChar)) {
+                showToast("Invalid position for " + opDisplay, "warning"); return;
+            }
+            currentInput += opEval; displayValue += opDisplay;
+            isNewCalculation = false;
+            updateDisplay(true); updateSecondaryDisplay(currentInput);
+        }
+        function insertRandom() {
+            const rand = Math.random();
+            resetInputForNewCalculationIfNeeded();
+            if (shouldInsertMultiply(currentInput)) { currentInput += '*'; displayValue += '×'; }
+            handleInitialZeroState();
+            currentInput += String(rand); displayValue += formatDisplayValue(String(rand));
+            isNewCalculation = false; updateDisplay(true); updateSecondaryDisplay(currentInput);
+        }
+        function reciprocal() {
+            if (currentInput === '0' || currentInput === '' || isNewCalculation || currentInput === 'Error') {
+                showToast("Error: Cannot divide by zero or invalid input.", "error");
+                currentInput = 'Error'; displayValue = 'Error'; updateDisplay(); isNewCalculation = true; return;
+            }
+            try {
+                // Evaluate the current expression first
+                const processedForEval = preprocessExpression(currentInput);
+                const valToRecip = evaluateInScope(processedForEval);
+
+                if (valToRecip === 0) throw new Error("Division by zero");
+                if (isNaN(valToRecip) || !isFinite(valToRecip)) throw new Error("Invalid input for reciprocal");
+                
+                const result = 1 / valToRecip;
+                updateSecondaryDisplay(`1/(${formatDisplayValue(currentInput)}) = ${formatDisplayValue(String(result))}`);
+                currentInput = String(result); displayValue = formatDisplayValue(String(result));
+                isNewCalculation = true; openBracketCount = 0; updateDisplay();
+                showToast("Reciprocal calculated.", "success");
+            } catch (error) {
+                showToast("Reciprocal Error: " + (error.message || "Invalid input"), "error");
+                currentInput = 'Error'; displayValue = 'Error'; updateDisplay(); isNewCalculation = true;
+            }
+        }
+
+        function calculate() {
+            if (currentInput === '' || currentInput === 'Error' || (currentInput === '0' && displayValue === '0')) {
+                showToast("No expression to calculate.", "warning"); return;
+            }
+            let exprToCalc = currentInput;
+            let displayExpr = displayValue; // Keep a copy for secondary display
+
+            while (openBracketCount > 0) {
+                exprToCalc += ')'; displayExpr += ')'; openBracketCount--;
+            }
+            const lastChar = exprToCalc.slice(-1);
+            if (['+', '-', '*', '/', '%', '.'].includes(lastChar) || exprToCalc.endsWith('**')) {
+                showToast("Invalid format: Expression ends with operator/decimal.", "warning");
+                display.classList.add('shake'); setTimeout(() => display.classList.remove('shake'), 500); return;
+            }
+            updateSecondaryDisplay(formatDisplayValue(displayExpr) + " ="); // Show formatted expression
+            try {
+                const processedExpression = preprocessExpression(exprToCalc);
+                const result = evaluateInScope(processedExpression);
+
+                if (isNaN(result)) throw new Error("Result is undefined (e.g. √-1 or invalid operation)");
+                if (!isFinite(result)) throw new Error("Result is Infinity (e.g. division by zero)");
+                
+                currentInput = String(result); displayValue = formatDisplayValue(String(result));
+                isNewCalculation = true; openBracketCount = 0; updateDisplay();
+                showToast("Calculation successful.", "success");
+            } catch (error) {
+                showToast("Calc Error: " + error.message, "error");
+                currentInput = 'Error'; displayValue = 'Error'; isNewCalculation = true; openBracketCount = 0;
+                updateDisplay(); display.classList.add('shake'); setTimeout(() => display.classList.remove('shake'), 500);
+            }
+        }
+
+        function preprocessExpression(expr) {
+            let processed = expr;
+            // Replace user-facing constants with internal var names before eval
+            processed = processed.replace(/π/g, 'PI_CONST');
+            processed = processed.replace(/(?<![a-zA-Z])e(?![a-zA-Z])/g, 'E_CONST'); // Standalone 'e'
+            processed = processed.replace(/(?<![a-zA-Z])c(?![a-zA-Z])/g, 'C_LIGHT');
+            processed = processed.replace(/(?<![a-zA-Z])h(?![a-zA-Z])/g, 'H_PLANCK');
+            processed = processed.replace(/(?<![a-zA-Z])G(?![a-zA-Z])/g, 'G_GRAV');
+            processed = processed.replace(/Nₐ/g, 'N_AVOGADRO');
+            processed = processed.replace(/(?<![a-zA-Z])R(?![a-zA-Z])/g, 'R_GAS');
+
+
+            // Factorial: make sure it's applied to a number or parenthesized expression
+            processed = processed.replace(/(\([\s\S]*?\)|-?\d*\.?\d+(?:e[+\-]?\d+)?)\!/g, (match, p1) => `factorial(${p1})`);
+            // Percentage: X% -> X/100
+            processed = processed.replace(/(\d*\.?\d+(?:e[+\-]?\d+)?)%/g, '($1/100)');
+            
+            // Ensure function names are standard for the execution scope
+            // e.g. if user types "ln(", it should be "log(" for Math.log
+            processed = processed.replace(/ln\(/g, 'log('); // Natural log
+            processed = processed.replace(/log₁₀\(/g, 'log10('); // Base 10 log
+            // Inverse trig might have display symbols
+            processed = processed.replace(/sin⁻¹\(/g, 'asin(');
+            processed = processed.replace(/cos⁻¹\(/g, 'acos(');
+            processed = processed.replace(/tan⁻¹\(/g, 'atan(');
+            // Roots
+            processed = processed.replace(/√\(/g, 'sqrt(');
+            processed = processed.replace(/³√\(/g, 'cbrt(');
+            // Powers
+            processed = processed.replace(/eˣ\(/g, 'exp(');
+            processed = processed.replace(/10ˣ\(/g, 'pow(10,');
+
+
+            return processed;
+        }
+        
+        function toRadians(degrees) { return degrees * (PI_CONST / 180); }
+        function toDegrees(radians) { return radians * (180 / PI_CONST); }
+
+        function evaluateInScope(expr) {
+            const executionScope = {
+                // Math constants
+                PI_CONST: PI_CONST, E_CONST: E_CONST,
+                // Physical Constants
+                C_LIGHT: C_LIGHT, H_PLANCK: H_PLANCK, G_GRAV: G_GRAV,
+                N_AVOGADRO: N_AVOGADRO, R_GAS: R_GAS,
+                // Helper functions
+                factorial: factorial,
+                toRadians: toRadians, 
+                toDegrees: toDegrees,
+                // Standard Math functions (will be available via Math. in Function body if not shadowed)
+                // but defining them directly in scope is safer for this sandboxed eval.
+                sqrt: Math.sqrt, cbrt: Math.cbrt, abs: Math.abs,
+                log10: Math.log10, log: Math.log, // log is natural log (ln)
+                exp: Math.exp, pow: Math.pow,
+                round: Math.round, floor: Math.floor, ceil: Math.ceil,
+                sinh: Math.sinh, cosh: Math.cosh, tanh: Math.tanh,
+                asinh: Math.asinh, acosh: Math.acosh, atanh: Math.atanh,
+                // DEG/RAD dependent trig functions
+                sin: degMode ? (x) => Math.sin(toRadians(x)) : Math.sin,
+                cos: degMode ? (x) => Math.cos(toRadians(x)) : Math.cos,
+                tan: degMode ? (x) => Math.tan(toRadians(x)) : Math.tan,
+                asin: degMode ? (x) => toDegrees(Math.asin(x)) : Math.asin,
+                acos: degMode ? (x) => toDegrees(Math.acos(x)) : Math.acos,
+                atan: degMode ? (x) => toDegrees(Math.atan(x)) : Math.atan,
+            };
+            // Whitelist characters for safety
+            const sanitizedExpr = String(expr).replace(/[^-()\d/*+%.eE_A-Za-z\s,]/g, ''); // Allow A-Z for const names
+            const func = new Function(...Object.keys(executionScope), `"use strict"; return ${sanitizedExpr};`);
+            return func.apply(null, Object.values(executionScope));
+        }
+
+        function factorial(nStr) {
+            let n = parseFloat(nStr); // Evaluate expression inside factorial if any
+            if (isNaN(n)) throw new Error("Invalid input for factorial.");
+            n = Math.floor(n);
+            if (n < 0) throw new Error("Factorial of negative number.");
+            if (n > 170) throw new Error("Factorial overflow (too large).");
+            if (n === 0 || n === 1) return 1;
+            let result = 1;
+            for (let i = 2; i <= n; i++) result *= i;
+            return result;
+        }
+
+        function clearAll() {
+            currentInput = '0'; displayValue = '0'; secondaryDisplay.textContent = '';
+            isNewCalculation = true; openBracketCount = 0; updateDisplay();
+            showToast("Calculator Cleared", "info");
+        }
+        function deleteChar() {
+            if (isNewCalculation && displayValue !== "Error") { clearAll(); return; }
+            if (displayValue === 'Error') { clearAll(); return; }
+
+            if (currentInput.length > 0 && currentInput !== '0') {
+                // This is tricky. For simplicity, just remove the last char from both.
+                // A more robust solution would parse tokens.
+                const lastCurrentChar = currentInput.slice(-1);
+                currentInput = currentInput.slice(0, -1);
+                displayValue = displayValue.slice(0, -1); // This might not perfectly align if display has multi-char ops
+
+                if (lastCurrentChar === '(') openBracketCount = Math.max(0, openBracketCount - 1);
+                else if (lastCurrentChar === ')') openBracketCount++; // Re-increment if a closer was removed
+
+                if (currentInput === '') { currentInput = '0'; displayValue = '0'; isNewCalculation = true; }
+                // Recalculate openBracketCount more reliably
+                openBracketCount = (currentInput.match(/\(/g) || []).length - (currentInput.match(/\)/g) || []).length;
+
+            } else {
+                currentInput = '0'; displayValue = '0'; isNewCalculation = true; openBracketCount = 0;
+            }
+            updateDisplay(); updateSecondaryDisplay(currentInput);
+        }
+        
+        function memoryClear() { memoryValue = 0; localStorage.setItem('calc_memory_v6', memoryValue); showToast("Memory Cleared", "info"); }
+        function memoryRecall() {
+            resetInputForNewCalculationIfNeeded(); handleInitialZeroState();
+            const memStr = String(memoryValue);
+            currentInput += memStr; displayValue += formatDisplayValue(memStr);
+            updateDisplay(true); updateSecondaryDisplay(currentInput);
+            showToast("Memory Recalled: " + formatDisplayValue(memStr), "info");
+        }
+        function memoryAdd() {
+            try {
+                const val = evaluateInScope(preprocessExpression(currentInput === '0' && displayValue !== '0' ? displayValue : currentInput));
+                if (isNaN(val)) throw new Error("Invalid value for M+");
+                memoryValue += val; localStorage.setItem('calc_memory_v6', memoryValue);
+                showToast(formatDisplayValue(String(val)) + " Added. M: " + formatDisplayValue(String(memoryValue)), "success");
+                isNewCalculation = true;
+            } catch (e) { showToast("M+ Error: " + (e.message || "Cannot add."), "error"); }
+        }
+        function memorySubtract() {
+             try {
+                const val = evaluateInScope(preprocessExpression(currentInput === '0' && displayValue !== '0' ? displayValue : currentInput));
+                if (isNaN(val)) throw new Error("Invalid value for M-");
+                memoryValue -= val; localStorage.setItem('calc_memory_v6', memoryValue);
+                showToast(formatDisplayValue(String(val)) + " Subtracted. M: " + formatDisplayValue(String(memoryValue)), "success");
+                isNewCalculation = true;
+            } catch (e) { showToast("M- Error: " + (e.message || "Cannot subtract."), "error"); }
+        }
+        function memoryStore() {
+            try {
+                const val = evaluateInScope(preprocessExpression(currentInput === '0' && displayValue !== '0' ? displayValue : currentInput));
+                if (isNaN(val)) throw new Error("Invalid value for MS");
+                memoryValue = val; localStorage.setItem('calc_memory_v6', memoryValue);
+                showToast("Stored: " + formatDisplayValue(String(memoryValue)), "success");
+                isNewCalculation = true;
+            } catch (e) { showToast("MS Error: " + (e.message || "Cannot store."), "error"); }
+        }
+
+        function toggleTheme() {
+            const isDarkMode = document.body.classList.toggle('dark-mode');
+            document.body.classList.toggle('light-mode', !isDarkMode);
+            localStorage.setItem('calc_darkMode_v6', isDarkMode);
+            themeToggleBtnIcon.className = isDarkMode ? 'fas fa-moon' : 'fas fa-sun';
+            showToast(isDarkMode ? "Dark Mode" : "Light Mode", "info");
+        }
+        function toggleDegRad() {
+            degMode = !degMode; localStorage.setItem('calc_degMode_v6', degMode);
+            updateDegRadUI(); showToast(degMode ? "Degrees Mode" : "Radians Mode", "info");
+        }
+        function updateDegRadUI() {
+            degRadToggleBtn.textContent = degMode ? "DEG" : "RAD";
+            modeIndicator.textContent = degMode ? "DEG" : "RAD";
+            degRadToggleBtn.classList.toggle('active', degMode);
+        }
+        function switchTab(panelId, clickedButton) {
+            Object.values(allButtonPanels).forEach(panel => panel?.classList.remove('active'));
+            allButtonPanels[panelId]?.classList.add('active');
+            panelSwitcherButtons.forEach(btn => btn.classList.remove('active'));
+            clickedButton?.classList.add('active');
+        }
+        
+        function solveQuadratic() {
+            const aStr = prompt("ax²+bx+c=0\nEnter coefficient a:"); if (aStr === null) return;
+            const bStr = prompt("Enter coefficient b:"); if (bStr === null) return;
+            const cStr = prompt("Enter coefficient c:"); if (cStr === null) return;
+            const a = parseFloat(aStr), b = parseFloat(bStr), c = parseFloat(cStr);
+            if (isNaN(a) || isNaN(b) || isNaN(c)) { showToast("Invalid coefficients.", "error"); return; }
+            if (a === 0) { showToast("'a' cannot be zero.", "error"); return; }
+            const discriminant = b*b - 4*a*c; let r1, r2, txt;
+            if (discriminant > 0) {
+                r1 = (-b + Math.sqrt(discriminant))/(2*a); r2 = (-b - Math.sqrt(discriminant))/(2*a);
+                txt = `x₁=${formatDisplayValue(String(r1))}, x₂=${formatDisplayValue(String(r2))}`;
+            } else if (discriminant === 0) {
+                r1 = -b/(2*a); txt = `x=${formatDisplayValue(String(r1))}`;
+            } else {
+                const rp = -b/(2*a), ip = Math.sqrt(-discriminant)/(2*a);
+                txt = `x₁=${formatDisplayValue(String(rp))}+${formatDisplayValue(String(ip))}i, x₂=${formatDisplayValue(String(rp))}-${formatDisplayValue(String(ip))}i`;
+            }
+            secondaryDisplay.textContent = `a=${a},b=${b},c=${c}`; displayValue = txt; currentInput = txt;
+            isNewCalculation = true; updateDisplay(); showToast("Quadratic solved.", "success");
+        }
+        function nPr_calc(n, r) { if (r < 0 || r > n) return 0; let res = 1; for (let i=0; i<r; i++) res *= (n-i); return res; }
+        function nCr_calc(n, r) { if (r < 0 || r > n) return 0; if (r === 0 || r === n) return 1; if (r > n/2) r = n-r; let res = 1; for (let i=1; i<=r; i++) res = res * (n-i+1)/i; return res; }
+        function calculateNPR() {
+            const n = parseInt(prompt("nPr: Enter n:")); if (isNaN(n)) return;
+            const r = parseInt(prompt("nPr: Enter r:")); if (isNaN(r)) return;
+            if (n < 0 || r < 0 || r > n) { showToast("Invalid nPr input.", "error"); return; }
+            const result = nPr_calc(n,r); displayValue = formatDisplayValue(String(result)); currentInput = String(result);
+            secondaryDisplay.textContent = `${n}P${r}=${displayValue}`; isNewCalculation = true; updateDisplay();
+        }
+        function calculateNCR() {
+            const n = parseInt(prompt("nCr: Enter n:")); if (isNaN(n)) return;
+            const r = parseInt(prompt("nCr: Enter r:")); if (isNaN(r)) return;
+            if (n < 0 || r < 0 || r > n) { showToast("Invalid nCr input.", "error"); return; }
+            const result = nCr_calc(n,r); displayValue = formatDisplayValue(String(result)); currentInput = String(result);
+            secondaryDisplay.textContent = `${n}C${r}=${displayValue}`; isNewCalculation = true; updateDisplay();
+        }
+
+        // --- Converter Functions ---
+        function performConversion(value, unit, conversions, targetUnit) {
+            if (!conversions[unit] || !conversions[targetUnit]) throw new Error("Unsupported unit.");
+            let valueInBaseUnit = (typeof conversions[unit].toBase === 'function') ? conversions[unit].toBase(value) : value * conversions[unit].toBase;
+            let result = (typeof conversions[targetUnit].fromBase === 'function') ? conversions[targetUnit].fromBase(valueInBaseUnit) : valueInBaseUnit * conversions[targetUnit].fromBase;
+            return { result, originalSymbol: conversions[unit].symbol, convertedSymbol: conversions[targetUnit].symbol };
+        }
+        function genericConverter(conversionName, unitsDefinition, promptMessageStart, exampleUnit = "unit") {
+            const unitKeysArray = Object.keys(unitsDefinition);
+            const promptSupportedUnits = unitKeysArray.join(', ');
+            const inputVal = prompt(`${promptMessageStart} (e.g., '10 ${exampleUnit}')\nSupported: ${promptSupportedUnits}`);
+            if (inputVal === null) return;
+            if (inputVal.trim() === "") { showToast("Input cannot be empty.", "warning"); return; }
+            
+            const unitRegexKeys = unitKeysArray.map(key => key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+            const regexPattern = new RegExp(`^(\\-?\\d*\\.?\\d+(?:e[+\\-]?\\d+)?)\\s*(${unitRegexKeys})$`, 'i');
+            const parts = inputVal.trim().match(regexPattern);
+
+            if (!parts) { showToast(`Invalid format or unit for ${conversionName}.`, "error"); return; }
+            const value = parseFloat(parts[1]);
+            const unit = parts[2].toLowerCase(); // Ensure unit key is lowercase for matching
+
+            const targetUnitKey = prompt(`Convert ${value}${unitsDefinition[unit].symbol} to which unit?\nSupported: ${promptSupportedUnits}`).trim().toLowerCase();
+            if (targetUnitKey === null || targetUnitKey === "") { showToast("Target unit cannot be empty.", "warning"); return; }
+            if (!unitsDefinition[targetUnitKey]) { showToast(`Invalid target unit for ${conversionName}.`, "error"); return; }
+
+            try {
+                const { result, originalSymbol, convertedSymbol } = performConversion(value, unit, unitsDefinition, targetUnitKey);
+                const resultFormatted = formatDisplayValue(String(result.toFixed(6)));
+                const valueFormatted = formatDisplayValue(String(value));
+                secondaryDisplay.textContent = `${valueFormatted}${originalSymbol} = ${resultFormatted}${convertedSymbol}`;
+                currentInput = String(result); displayValue = resultFormatted;
+                isNewCalculation = true; updateDisplay();
+                showToast(`${conversionName}: ${valueFormatted}${originalSymbol} is ${resultFormatted}${convertedSymbol}`, "success");
+            } catch (error) { showToast(`${conversionName} error: ${error.message}`, "error"); }
+        }
+
+        // Unit Definitions
+        const tempUnits = { 'c': {symbol:'°C',toBase:v=>v,fromBase:v=>v}, 'f':{symbol:'°F',toBase:v=>(v-32)*5/9,fromBase:v=>(v*9/5)+32}, 'k':{symbol:'K',toBase:v=>v-273.15,fromBase:v=>v+273.15} };
+        const lengthUnits = { 'm':{s:"m",b:1}, 'km':{s:"km",b:1000}, 'cm':{s:"cm",b:0.01}, 'mm':{s:"mm",b:0.001}, 'mi':{s:"mi",b:1609.34}, 'yd':{s:"yd",b:0.9144}, 'ft':{s:"ft",b:0.3048}, 'in':{s:"in",b:0.0254}, 'µm':{s:"µm",b:1e-6}, 'nm':{s:"nm",b:1e-9} };
+        Object.values(lengthUnits).forEach(u => { u.symbol = " "+u.s; u.toBase = u.b; u.fromBase = 1/u.b; }); lengthUnits.m.fromBase = 1; // Base unit
+        const weightUnits = { 'kg':{s:"kg",b:1}, 'g':{s:"g",b:0.001}, 'mg':{s:"mg",b:1e-6}, 'tonne':{s:"t",b:1000}, 'lb':{s:"lb",b:0.453592}, 'oz':{s:"oz",b:0.0283495}, 'µg':{s:"µg",b:1e-9} };
+        Object.values(weightUnits).forEach(u => { u.symbol = " "+u.s; u.toBase = u.b; u.fromBase = 1/u.b; }); weightUnits.kg.fromBase = 1;
+        const angleUnits = { 'deg':{s:'°',b:1}, 'rad':{s:'rad', toBase:v=>v*(180/PI_CONST), fromBase:v=>v*(PI_CONST/180)}, 'grad':{s:'grad',b:0.9} };
+        Object.values(angleUnits).forEach(u => { u.symbol = u.s; if(u.b){ u.toBase = u.b; u.fromBase = 1/u.b; }}); angleUnits.deg.fromBase=1;
+        const areaUnits = { 'sqm':{s:"m²",b:1}, 'sqkm':{s:"km²",b:1e6}, 'sqcm':{s:"cm²",b:1e-4}, 'ha':{s:"ha",b:1e4}, 'acre':{s:"acre",b:4046.86}, 'sqft':{s:"ft²",b:0.092903}, 'sqin':{s:"in²",b:0.00064516} };
+        Object.values(areaUnits).forEach(u => { u.symbol = " "+u.s; u.toBase = u.b; u.fromBase = 1/u.b; }); areaUnits.sqm.fromBase = 1;
+        const volumeUnits = { 'm3':{s:"m³",b:1}, 'l':{s:"L",b:0.001}, 'ml':{s:"mL",b:1e-6}, 'cm3':{s:"cm³",b:1e-6}, 'ft3':{s:"ft³",b:0.0283168}, 'in3':{s:"in³",b:1.6387e-5}, 'gal':{s:"gal(US)",b:0.00378541} };
+        Object.values(volumeUnits).forEach(u => { u.symbol = " "+u.s; u.toBase = u.b; u.fromBase = 1/u.b; }); volumeUnits.m3.fromBase = 1;
+        const timeUnits = { 's':{s:"s",b:1}, 'ms':{s:"ms",b:0.001}, 'µs':{s:"µs",b:1e-6}, 'ns':{s:"ns",b:1e-9}, 'min':{s:"min",b:60}, 'hr':{s:"hr",b:3600}, 'day':{s:"day",b:86400}, 'week':{s:"wk",b:604800}, 'year':{s:"yr",b:31536000}}; // year approx
+        Object.values(timeUnits).forEach(u => { u.symbol = " "+u.s; u.toBase = u.b; u.fromBase = 1/u.b; }); timeUnits.s.fromBase = 1;
+        const speedUnits = { 'm/s':{s:"m/s",b:1}, 'km/h':{s:"km/h",b:1/3.6}, 'mph':{s:"mph",b:0.44704}, 'knot':{s:"knot",b:0.514444}, 'ft/s':{s:"ft/s",b:0.3048} };
+        Object.values(speedUnits).forEach(u => { u.symbol = " "+u.s; u.toBase = u.b; u.fromBase = 1/u.b; }); speedUnits['m/s'].fromBase = 1;
+        const pressureUnits = { 'pa':{s:"Pa",b:1}, 'kpa':{s:"kPa",b:1000}, 'bar':{s:"bar",b:100000}, 'psi':{s:"psi",b:6894.76}, 'atm':{s:"atm",b:101325}, 'torr':{s:"Torr",b:133.322} };
+        Object.values(pressureUnits).forEach(u => { u.symbol = " "+u.s; u.toBase = u.b; u.fromBase = 1/u.b; }); pressureUnits.pa.fromBase = 1;
+        const energyUnits = { 'j':{s:"J",b:1}, 'kj':{s:"kJ",b:1000}, 'cal':{s:"cal",b:4.184}, 'kcal':{s:"kcal",b:4184}, 'wh':{s:"Wh",b:3600}, 'kwh':{s:"kWh",b:3.6e6}, 'ev':{s:"eV",b:1.602e-19}, 'btu':{s:"BTU",b:1055.06}};
+        Object.values(energyUnits).forEach(u => { u.symbol = " "+u.s; u.toBase = u.b; u.fromBase = 1/u.b; }); energyUnits.j.fromBase = 1;
+        const powerUnits = { 'w':{s:"W",b:1}, 'kw':{s:"kW",b:1000}, 'hp':{s:"hp",b:745.7}, 'mw':{s:"MW",b:1e6} };
+        Object.values(powerUnits).forEach(u => { u.symbol = " "+u.s; u.toBase = u.b; u.fromBase = 1/u.b; }); powerUnits.w.fromBase = 1;
+        const dataUnits = { 'byte':{s:"B",b:1}, 'kb':{s:"KB",b:1024}, 'mb':{s:"MB",b:1024**2}, 'gb':{s:"GB",b:1024**3}, 'tb':{s:"TB",b:1024**4}, 'bit':{s:"bit",b:1/8} };
+        Object.values(dataUnits).forEach(u => { u.symbol = " "+u.s; u.toBase = u.b; u.fromBase = 1/u.b; }); dataUnits.byte.fromBase = 1;
+        const frequencyUnits = { 'hz':{s:"Hz",b:1}, 'khz':{s:"kHz",b:1e3}, 'mhz':{s:"MHz",b:1e6}, 'ghz':{s:"GHz",b:1e9}, 'rpm':{s:"rpm",b:1/60} };
+        Object.values(frequencyUnits).forEach(u => { u.symbol = " "+u.s; u.toBase = u.b; u.fromBase = 1/u.b; }); frequencyUnits.hz.fromBase = 1;
+        const fuelEconomyUnits = {'mpg(us)':{s:"mpg(US)",toBase:v=>235.215/v,fromBase:v=>235.215/v}, 'mpg(uk)':{s:"mpg(UK)",toBase:v=>282.481/v,fromBase:v=>282.481/v}, 'km/l':{s:"km/L",toBase:v=>100/v,fromBase:v=>100/v}, 'l/100km':{s:"L/100km",toBase:v=>v,fromBase:v=>v}}; // Base: L/100km
+        const forceUnits = { 'n':{s:"N",b:1}, 'kn':{s:"kN",b:1000}, 'dyn':{s:"dyn",b:1e-5}, 'lbf':{s:"lbf",b:4.44822} };
+        Object.values(forceUnits).forEach(u => { u.symbol = " "+u.s; u.toBase = u.b; u.fromBase = 1/u.b; }); forceUnits.n.fromBase = 1;
+        const torqueUnits = { 'nm':{s:"N·m",b:1}, 'ftlb':{s:"ft·lb",b:1.35582} };
+        Object.values(torqueUnits).forEach(u => { u.symbol = " "+u.s; u.toBase = u.b; u.fromBase = 1/u.b; }); torqueUnits.nm.fromBase = 1;
+        const chargeUnits = { 'c':{s:"C",b:1}, 'mc':{s:"mC",b:1e-3}, 'µc':{s:"µC",b:1e-6}, 'nc':{s:"nC",b:1e-9}, 'e':{s:"e",b:1.602e-19} }; // e is elementary charge
+        Object.values(chargeUnits).forEach(u => { u.symbol = " "+u.s; u.toBase = u.b; u.fromBase = 1/u.b; }); chargeUnits.c.fromBase = 1;
+        const voltageUnits = { 'v':{s:"V",b:1}, 'mv':{s:"mV",b:1e-3}, 'kv':{s:"kV",b:1e3} };
+        Object.values(voltageUnits).forEach(u => { u.symbol = " "+u.s; u.toBase = u.b; u.fromBase = 1/u.b; }); voltageUnits.v.fromBase = 1;
+        const resistanceUnits = { 'ohm':{s:"Ω",b:1}, 'kohm':{s:"kΩ",b:1e3}, 'mohm':{s:"MΩ",b:1e6} };
+        Object.values(resistanceUnits).forEach(u => { u.symbol = " "+u.s; u.toBase = u.b; u.fromBase = 1/u.b; }); resistanceUnits.ohm.fromBase = 1;
+        const capacitanceUnits = { 'f':{s:"F",b:1}, 'mf':{s:"mF",b:1e-3}, 'µf':{s:"µF",b:1e-6}, 'nf':{s:"nF",b:1e-9}, 'pf':{s:"pF",b:1e-12} };
+        Object.values(capacitanceUnits).forEach(u => { u.symbol = " "+u.s; u.toBase = u.b; u.fromBase = 1/u.b; }); capacitanceUnits.f.fromBase = 1;
+        const amountSubstanceUnits = { 'mol':{s:"mol",b:1}, 'kmol':{s:"kmol",b:1000}, 'mmol':{s:"mmol",b:0.001} };
+        Object.values(amountSubstanceUnits).forEach(u => { u.symbol = " "+u.s; u.toBase = u.b; u.fromBase = 1/u.b; }); amountSubstanceUnits.mol.fromBase = 1;
+
+
+        function convertTemperature() { genericConverter('Temperature', tempUnits, "Enter temperature", "C"); }
+        function convertLength() { genericConverter('Length', lengthUnits, "Enter length", "m"); }
+        function convertWeight() { genericConverter('Weight/Mass', weightUnits, "Enter weight", "kg"); }
+        function convertAngle(){ genericConverter('Angle', angleUnits, "Enter angle", "deg"); }
+        function convertArea(){ genericConverter('Area', areaUnits, "Enter area", "sqm"); }
+        function convertVolume(){ genericConverter('Volume', volumeUnits, "Enter volume", "m3"); }
+        function convertTime(){ genericConverter('Time', timeUnits, "Enter time", "s"); }
+        function convertSpeed(){ genericConverter('Speed', speedUnits, "Enter speed", "m/s"); }
+        function convertPressure(){ genericConverter('Pressure', pressureUnits, "Enter pressure", "Pa"); }
+        function convertEnergy(){ genericConverter('Energy', energyUnits, "Enter energy", "J"); }
+        function convertPower(){ genericConverter('Power', powerUnits, "Enter power", "W"); }
+        function convertData(){ genericConverter('Data', dataUnits, "Enter data size", "byte"); }
+        function convertCurrency(){ showToast("Currency converter: Not implemented (requires live API).", "warning");}
+        function convertFuelEconomy(){ genericConverter('Fuel Economy', fuelEconomyUnits, "Enter fuel economy", "l/100km");}
+        function convertDigitalStorage(){ convertData(); } // Alias
+        function convertFrequency(){ genericConverter('Frequency', frequencyUnits, "Enter frequency", "Hz"); }
+        function convertVolumeFlow(){ showToast("Volume Flow converter: Not fully implemented.", "info");} // Example: { 'm3/s':{s:"m³/s",b:1}, 'l/s':{s:"L/s",b:0.001} }
+        function convertForce(){ genericConverter('Force', forceUnits, "Enter force", "N"); }
+        function convertTorque(){ genericConverter('Torque', torqueUnits, "Enter torque", "Nm"); }
+        function convertCharge(){ genericConverter('Electric Charge', chargeUnits, "Enter charge", "C"); }
+        function convertVoltage(){ genericConverter('Voltage', voltageUnits, "Enter voltage", "V"); }
+        function convertResistance(){ genericConverter('Resistance', resistanceUnits, "Enter resistance", "ohm"); }
+        function convertCapacitance(){ genericConverter('Capacitance', capacitanceUnits, "Enter capacitance", "F"); }
+        function convertAmountOfSubstance(){ genericConverter('Amount of Substance', amountSubstanceUnits, "Enter amount", "mol"); }
+
+        function showToast(message, type = 'info', duration = 2500) {
+            toast.textContent = message; toast.className = 'toast show ' + type;
+            setTimeout(() => { toast.classList.remove('show'); }, duration);
+        }
+        window.addEventListener('unhandledrejection', e => { console.error('Unhandled Rejection:', e.reason); showToast('Unexpected error. Check console.', 'error'); });
+        window.onerror = (m,s,l,c,err) => { console.error("Global error:", m,s,l,c,err); showToast('Critical error. Check console.', 'error'); return true; };
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
